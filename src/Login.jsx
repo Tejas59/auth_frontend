@@ -42,7 +42,7 @@ const Login = () => {
     setLoginAttempts(loginAttempts + 1); // Increment login attempts
 
     try {
-      const { data } = await axios.post("http://localhost:3001/", {
+      const { data } = await axios.post("https://auth-backend-1-sk1n.onrender.com/", {
         email,
         password,
       });

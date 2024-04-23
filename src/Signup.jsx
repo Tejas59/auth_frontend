@@ -13,7 +13,7 @@ function Signup() {
   const handleSubmit = (e) => {
     e.preventDefault();
     axios
-      .post("http://localhost:3001/register", { name, email, password })
+      .post("https://auth-backend-1-sk1n.onrender.com/register", { name, email, password })
 
       .then((res) => {
         navigate('/');
