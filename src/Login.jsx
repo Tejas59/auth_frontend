@@ -5,12 +5,14 @@ import { Link, useNavigate } from "react-router-dom";
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const navigate = useNavigate();
 
-  const [loginAttempts, setLoginAttempts] = useState(0); 
+  const [loginAttempts, setLoginAttempts] = useState(0);
   const [isAccountLocked, setIsAccountLocked] = useState(false);
-  const [lockedUntil, setLockedUntil] = useState(null); 
-  const [loginError, setLoginError] = useState(null); // State to store login error message
+  const [lockedUntil, setLockedUntil] = useState(null);
+  const [loginError, setLoginError] = useState(null);
+
 
   useEffect(() => {
     const storedLockedUntil = localStorage.getItem('lockedUntil');
@@ -39,35 +41,44 @@ const Login = () => {
       }
     }
 
-    setLoginAttempts(loginAttempts + 1); // Increment login attempts
-
     try {
       const { data } = await axios.post("https://auth-backend-1-sk1n.onrender.com/", {
         email,
         password,
       });
-
+    
       if (data.status === "success") {
         localStorage.setItem('name', data.name);
         navigate('/home');
       } else if (data.status === "locked") {
         setIsAccountLocked(true);
-        setLockedUntil(new Date(data.lockedUntil)); 
-        alert("Your account is locked due to multiple failed login attempts. Please try again later.");
-      } else {
-        // Display error message for incorrect password
-        setLoginError("Incorrect email or password. Please try again.");
-        console.log("Login failed:", data.message); 
-      }
-    } catch (err) {
-      // Handle 403 Forbidden error
-      if (err.response && err.response.status === 403) {
+        setLockedUntil(new Date(data.lockedUntil));
         setLoginError("Your account is locked due to multiple failed login attempts. Please try again later.");
+      } else if (data.message === "Email not found.") { // Handle email not found error
+        setLoginError("Email not found. Please check your email and try again.");
+      } else if (data.message === "Incorrect password.") { // Handle incorrect password error
+        setLoginError("Incorrect password. Please try again.");
       } else {
         setLoginError("An unexpected error occurred. Please try again later.");
+        console.log("Login failed:", data.message);
       }
-      console.error("Error logging in:", err);
+    } catch (err) {
+      // Handle other unexpected errors
+      if (err.response && err.response.status === 401) {
+        setLoginAttempts(loginAttempts + 1); // Increment login attempts
+        setLoginError("Incorrect password. Please try again.");
+      } else if (err.response && err.response.status === 403) {
+        setLoginError("Your account is locked due to multiple failed login attempts. Please try again later.");
+      }
+      else if(err.response && err.response.status === 404){
+        setLoginError("Email not found. Please check your email and try again.");
+      } 
+      else {
+        setLoginError("An unexpected error occurred. Please try again later.");
+        console.error("Error logging in:", err);
+      }
     }
+    
   };
 
   return (
@@ -98,14 +109,23 @@ const Login = () => {
           </div>
           <div className="mb-3">
             <label htmlFor="email"><strong>Password</strong></label>
-            <input
-              type="password"
-              placeholder="Enter Password"
-              autoComplete="off"
-              name="password"
-              className="form-control rounded-0"
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <div className="input-group">
+              <input
+                type={isPasswordVisible ? "text" : "password"}
+                placeholder="Enter Password"
+                autoComplete="off"
+                name="password"
+                className="form-control rounded-0"
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button
+                className="btn btn-outline-secondary"
+                type="button"
+                onClick={() => setIsPasswordVisible(!isPasswordVisible)}
+              >
+                <i className={`bi ${isPasswordVisible ? 'bi-eye-slash' : 'bi-eye'}`}></i>
+              </button>
+            </div>
           </div>
           <button type="submit" className="btn btn-success w-100 rounded-0">Login</button>
           <p>Don't have an account</p>
