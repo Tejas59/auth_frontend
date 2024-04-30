@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState} from 'react';
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -8,38 +8,11 @@ const Login = () => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const navigate = useNavigate();
 
-  const [loginAttempts, setLoginAttempts] = useState(0);
-  const [isAccountLocked, setIsAccountLocked] = useState(false);
-  const [lockedUntil, setLockedUntil] = useState(null);
   const [loginError, setLoginError] = useState(null);
 
 
-  useEffect(() => {
-    const storedLockedUntil = localStorage.getItem('lockedUntil');
-    if (storedLockedUntil) {
-      const now = new Date();
-      const lockExpiry = new Date(storedLockedUntil);
-      if (now < lockExpiry) {
-        setIsAccountLocked(true);
-        setLockedUntil(lockExpiry);
-      }
-    }
-  }, []);
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (isAccountLocked) {
-      const now = new Date();
-      if (now >= lockedUntil) {
-        setIsAccountLocked(false);
-        setLockedUntil(null);
-        setLoginAttempts(0); // Reset attempts after lock expiry
-      } else {
-        alert("Your account is locked due to multiple failed login attempts. Please try again later.");
-        return;
-      }
-    }
 
     try {
       const { data } = await axios.post("https://auth-backend-1-sk1n.onrender.com/", {
@@ -50,22 +23,10 @@ const Login = () => {
       if (data.status === "success") {
         localStorage.setItem('name', data.name);
         navigate('/home');
-      } else if (data.status === "locked") {
-        setIsAccountLocked(true);
-        setLockedUntil(new Date(data.lockedUntil));
-        setLoginError("Your account is locked due to multiple failed login attempts. Please try again later.");
-      } else if (data.message === "Email not found.") { // Handle email not found error
-        setLoginError("Email not found. Please check your email and try again.");
-      } else if (data.message === "Incorrect password.") { // Handle incorrect password error
-        setLoginError("Incorrect password. Please try again.");
-      } else {
-        setLoginError("An unexpected error occurred. Please try again later.");
-        console.log("Login failed:", data.message);
-      }
+      } 
+      
     } catch (err) {
-      // Handle other unexpected errors
       if (err.response && err.response.status === 401) {
-        setLoginAttempts(loginAttempts + 1); // Increment login attempts
         setLoginError("Incorrect password. Please try again.");
       } else if (err.response && err.response.status === 403) {
         setLoginError("Your account is locked due to multiple failed login attempts. Please try again later.");
@@ -85,11 +46,6 @@ const Login = () => {
     <div className="d-flex justify-content-center align-items-center bg-info vh-100">
       <div className="bg-white p-3 rounded w-25">
         <h2>Login</h2>
-        {isAccountLocked && ( // Display alert only if account is locked
-          <div className="alert alert-danger" role="alert">
-            Your account is locked. Please try again later.
-          </div>
-        )}
         {loginError && ( // Display login error message
           <div className="alert alert-danger" role="alert">
             {loginError}
